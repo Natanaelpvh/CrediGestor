@@ -1,0 +1,18 @@
+# --- Core Application & UI ---
+PyQt6             # Framework para a interface gráfica do usuário
+python-dotenv     # Gerencia variáveis de ambiente a partir do arquivo .env
+
+# --- Database & ORM ---
+SQLAlchemy        # ORM para interação com o banco de dados
+bcrypt            # Para hashing seguro de senhas
+
+# --- Database Drivers ---
+# O assistente de configuração suporta PostgreSQL e MySQL.
+# É recomendado ter ambos instalados para garantir a compatibilidade,
+# ou pelo menos o driver correspondente ao banco de dados que você usará.
+psycopg2-binary   # Driver para PostgreSQL
+PyMySQL           # Driver para MySQL (alternativa em Python puro, mais fácil de instalar)
+
+# --- Reporting & Utilities ---
+reportlab         # Para geração de relatórios (ex: PDF)
+python-dateutil   # Para manipulação avançada de datas e horas

@@ -1,0 +1,94 @@
+# Arquivo .gitignore para projetos Python
+# Gerado e revisado por Gemini Code Assist
+
+### Ambientes Virtuais ###
+# Ignora pastas de ambiente virtual para evitar incluir bibliotecas de terceiros no repositório.
+venv/
+.venv/
+env/
+.env/
+*/venv/
+*/.venv/
+
+### Caches do Python e de Ferramentas ###
+# Bytecode compilado e caches de ferramentas que são gerados em tempo de execução.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.scrapy
+
+### Pastas de Build e Distribuição ###
+# Artefatos gerados ao construir e distribuir o pacote.
+build/
+dist/
+sdist/
+*.egg-info/
+*.egg
+wheelhouse/
+*.whl
+
+### Relatórios e Dados de Teste ###
+# Relatórios de cobertura e outros dados de teste.
+htmlcov/
+junit/
+
+### Arquivos de Configuração de IDEs e Editores ###
+# Configurações específicas do ambiente de desenvolvimento local.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+*.nbproject/
+
+### Arquivos de Log e Banco de Dados ###
+# Logs e bancos de dados locais que não devem ser versionados.
+*.log
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+db.sqlite3-journal
+
+### Dados (Opcional) ###
+# Pastas com grandes datasets que não devem ir para o Git.
+data/
+datasets/
+
+### Arquivos de Segredos e Configuração Local ###
+# NUNCA versione arquivos com senhas, chaves de API, etc.
+# O arquivo .env contém credenciais de banco de dados e outras informações
+# sensíveis. É VITAL que ele NUNCA seja enviado para o repositório Git.
+.env
+.env.*
+!.env.example
+secrets.yml
+secrets.json
+*.pem
+*.key
+
+### Jupyter Notebook ###
+# Arquivos de checkpoint do Jupyter.
+.ipynb_checkpoints
+
+### Arquivos de Sistema Operacional ###
+# Metadados do sistema operacional.
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

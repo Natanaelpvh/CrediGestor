@@ -1,0 +1,46 @@
+# 1. Ambientes Virtuais
+# Pasta padrão para ambientes virtuais do Python
+venv/
+.venv/
+env/
+.env/
+*/venv/
+*/.venv/
+
+# 2. Caches do Python e de Ferramentas
+# Bytecode compilado do Python, não é código-fonte
+__pycache__/
+*.pyc
+
+# Caches de ferramentas de teste e análise
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# 3. Pastas de Build e Distribuição
+# Geradas ao criar pacotes Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 4. Relatórios e Dados de Teste
+# Arquivos de relatório de cobertura de testes
+.coverage
+htmlcov/
+
+# 5. Arquivos de Configuração de IDEs
+# Configurações específicas do editor que não são código
+.vscode/
+.idea/
+
+# 6. Arquivos de Log e de Banco de Dados
+# Arquivos que podem ser grandes e mudar constantemente
+*.log
+*.db
+*.sqlite3
+
+# 7. Dados (Opcional)
+# Se você tiver pastas com grandes datasets (CSV, JSON, etc.)
+data/
+datasets/
