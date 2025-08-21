@@ -30,7 +30,6 @@
 - **Arquitetura Modular:** Sistema projetado de forma escalável, facilitando a adição de novas funcionalidades.
 
 ## 🛠️ Tecnologias Utilizadas
-
 - **Linguagem:** Python 3.10+
 - **Interface Gráfica:** PyQt6
 - **Banco de Dados (ORM):** SQLAlchemy
@@ -38,39 +37,80 @@
 - **Relatórios:** ReportLab
 - **Segurança:** Bcrypt para hashing de senhas
 
-## 🚀 Instalação e Execução
+---
 
-Siga os passos abaixo para configurar e executar o projeto em seu ambiente local.
+## 🚀 Instalação e Uso
 
-**1. Clone o Repositório**
-```bash
-git clone https://github.com/Natanaelpvh/CrediGestor.git
-cd CrediGestor
-```
+Existem duas maneiras de instalar o CrediGestor, dependendo se você é um usuário final ou um desenvolvedor.
 
-**2. Crie e Ative um Ambiente Virtual**
-```bash
-# Crie o ambiente virtual
-python -m venv .venv
+### Para Usuários (Recomendado)
 
-# Ative o ambiente (Windows)
-.venv\Scripts\activate
+Esta é a maneira mais fácil de usar o sistema.
 
-# Ative o ambiente (Linux/macOS)
-source .venv/bin/activate
-```
+1.  **Baixe os arquivos** do projeto e descompacte-os em uma pasta.
+2.  Execute o script de inicialização correspondente ao seu sistema operacional:
+    -   **No Windows:** Dê um duplo clique no arquivo `run.bat`.
+    -   **No Linux:** Abra um terminal, navegue até a pasta e execute os comandos:
+        ```bash
+        chmod +x run.sh
+        ./run.sh
+        ```
 
-**3. Execute o Script de Inicialização**
-O sistema possui um orquestrador que verifica e instala as dependências automaticamente.
-```bash
-python start.py
-```
-> **Nota:** Na primeira execução, o script irá verificar as dependências do `requirements.txt` e instalá-las. Se o arquivo de configuração `.env` não for encontrado, um assistente gráfico será aberto para ajudá-lo a configurar a conexão com o banco de dados (SQLite, PostgreSQL ou MySQL).
+Na primeira vez que você executar, o sistema irá:
+- Instalar todas as dependências necessárias automaticamente.
+- Abrir um assistente para você configurar a conexão com o banco de dados.
+- Criar um atalho na sua Área de Trabalho para facilitar o acesso futuro.
 
-**4. Login**
-Após a configuração, a tela de login será exibida. Se for a primeira vez que o sistema é executado, um usuário administrador padrão será criado:
+### Para Desenvolvedores
+
+Se você deseja modificar ou contribuir com o código:
+
+1.  **Clone o Repositório**
+    ```bash
+    git clone https://github.com/Natanaelpvh/CrediGestor.git
+    cd CrediGestor
+    ```
+2.  **Crie e Ative um Ambiente Virtual**
+    ```bash
+    # Crie o ambiente
+    python -m venv .venv
+    # Ative (Windows)
+    .venv\Scripts\activate
+    # Ative (Linux/macOS)
+    source .venv/bin/activate
+    ```
+3.  **Execute o Script de Inicialização**
+    ```bash
+    python start.py
+    ```
+
+---
+
+## ⚙️ Configuração
+
+A configuração do sistema é armazenada em um arquivo `.env` na raiz do projeto, criado automaticamente pelo assistente na primeira execução. A variável mais importante é a `DATABASE_URL`.
+
+**Exemplos de `DATABASE_URL`:**
+- **SQLite:** `DATABASE_URL="sqlite:///database.db"`
+- **PostgreSQL:** `DATABASE_URL="postgresql+psycopg2://USER:PASS@HOST:PORT/DB_NAME"`
+- **MySQL:** `DATABASE_URL="mysql+pymysql://USER:PASS@HOST:PORT/DB_NAME"`
+
+## 👤 Login Padrão
+
+Na primeira inicialização, um usuário administrador padrão é criado para permitir o acesso:
 - **Email:** `admin@example.com`
 - **Senha:** `admin`
+
+> É altamente recomendável alterar essa senha após o primeiro login.
+
+## 📦 Backup e Restauração
+
+O sistema possui uma funcionalidade integrada para criar e restaurar backups do banco de dados.
+
+- **Backup**: Cria uma cópia segura do estado atual do banco de dados.
+- **Restauração**: Substitui o estado atual do banco de dados pelos dados de um arquivo de backup. **Atenção: esta operação é destrutiva e não pode ser desfeita.**
+
+> Para que a funcionalidade funcione com PostgreSQL ou MySQL, os respectivos utilitários de linha de comando (`pg_dump`, `psql`, `mysqldump`, `mysql`) devem estar instalados.
 
 ## 📄 Licença
 
