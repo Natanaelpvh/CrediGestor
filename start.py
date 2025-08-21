@@ -1,6 +1,6 @@
 # start.py
 """
-Ponto de entrada principal e orquestrador da aplicação.
+Ponto de entrada principal e orquestrador da aplicação CrediGestor.
 
 Este script define a classe `ApplicationLauncher`, que gerencia a sequência
 de inicialização de forma orientada a objetos, garantindo que o ambiente
@@ -9,6 +9,8 @@ esteja pronto antes de executar a aplicação principal.
 import sys
 import os
 import logging
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
 
 class ApplicationLauncher:
     """
@@ -19,10 +21,11 @@ class ApplicationLauncher:
         """Inicializa o launcher e configura o logging."""
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         logging.info("Iniciando verificação de ambiente...")
+        self.icon_path = 'assets/icon.ico' if sys.platform == 'win32' else 'assets/icon.png'
 
     def _check_dependencies(self) -> bool:
         """
-        Etapa 1: Verifica e instala as dependências do ambiente.
+        Etapa 1: Verifica e instala as dependências do ambiente para CrediGestor.
 
         Utiliza o `SetupManager` para comparar os pacotes listados em
         `requirements.txt` com os pacotes instalados no ambiente. Se houver
@@ -38,7 +41,7 @@ class ApplicationLauncher:
 
     def _check_configuration(self) -> bool:
         """
-        Etapa 2: Garante que o arquivo .env exista.
+        Etapa 2: Garante que o arquivo .env exista para CrediGestor.
 
         Se o arquivo `.env` não for encontrado na raiz do projeto, esta função
         inicia um assistente de configuração gráfico (`DBConfigWindow`) para
@@ -50,7 +53,7 @@ class ApplicationLauncher:
         """
         if not os.path.exists('.env'):
             logging.warning("Arquivo de configuração .env não encontrado. Iniciando assistente de configuração.")
-            from PyQt6.QtWidgets import QApplication, QDialog
+            from PyQt6.QtWidgets import QDialog
             from ui.db_config_window import DBConfigWindow
 
             app = QApplication.instance() or QApplication(sys.argv)
@@ -63,7 +66,7 @@ class ApplicationLauncher:
 
     def _launch_app(self):
         """
-        Etapa 3: Importa e inicia a aplicação principal.
+        Etapa 3: Importa e inicia a aplicação principal CrediGestor.
 
         Esta função realiza a importação do módulo `main` localmente para
         garantir que ela só ocorra após a verificação bem-sucedida de
@@ -71,6 +74,12 @@ class ApplicationLauncher:
         configuração na inicialização.
         """
         logging.info("Dependências e configuração verificadas. Iniciando a aplicação principal...")
+
+        # Garante que a instância da aplicação exista e define o ícone global.
+        app = QApplication.instance() or QApplication(sys.argv)
+        if os.path.exists(self.icon_path):
+            app.setWindowIcon(QIcon(self.icon_path))
+
         try:
             from main import main as launch_main_app
             launch_main_app()

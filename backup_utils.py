@@ -1,6 +1,6 @@
 # backup_utils.py
 """
-Módulo para gerenciar operações de backup do banco de dados.
+Módulo para gerenciar operações de backup do banco de dados para o sistema CrediGestor.
 
 A classe BackupManager encapsula a lógica para realizar backups de diferentes
 tipos de bancos de dados (SQLite, PostgreSQL, MySQL) com base na configuração
