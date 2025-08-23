@@ -1,11 +1,10 @@
 # services/cliente_service.py
 """
-Módulo de Serviço de Cliente.
+Define a camada de serviço para a entidade Cliente.
 
-Este módulo define a classe `ClienteService`, que encapsula toda a lógica de
-negócio para as operações de CRUD (Criar, Ler, Atualizar, Deletar) relacionadas
-aos clientes. Ele atua como uma camada intermediária entre a interface do usuário
-e o modelo de dados do cliente.
+Este módulo contém a classe `ClienteService`, que centraliza a lógica de
+negócio para manipulação de dados de clientes, servindo como uma ponte
+entre a interface do usuário e o acesso ao banco de dados.
 """
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -14,21 +13,41 @@ from models.cliente import Cliente
 
 class ClienteService:
     """
-    Serviço para gerenciar as operações de negócio relacionadas a clientes.
+    Encapsula a lógica de negócio para operações com clientes.
 
-    Fornece métodos para criar, ler, atualizar, deletar e buscar clientes,
-    abstraindo as interações diretas com a sessão do banco de dados.
+    Esta classe abstrai as interações com o banco de dados para a entidade
+    Cliente, fornecendo uma API clara para as operações de CRUD e busca.
     """
     def __init__(self, db_session: Session):
+        """
+        Inicializa o serviço de cliente.
+
+        Args:
+            db_session (Session): A sessão do SQLAlchemy para interagir com o banco.
+        """
         self.db = db_session
 
-    def get_all_clientes(self) -> List[Cliente]:
-        """Retorna todos os clientes, ordenados por nome."""
-        return self.db.query(Cliente).order_by(Cliente.nome).all()
+    def get_all_clientes(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[Cliente]:
+        """
+        Recupera uma lista paginada de clientes.
+
+        Args:
+            limit (Optional[int]): O número máximo de clientes a retornar.
+            offset (Optional[int]): O número de clientes a pular (para paginação).
+
+        Returns:
+            List[Cliente]: A lista de clientes, ordenada por ID para paginação estável.
+        """
+        query = self.db.query(Cliente).order_by(Cliente.id)
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
 
     def get_cliente_by_id(self, cliente_id: int) -> Optional[Cliente]:
         """
-        Busca um cliente específico pelo seu ID.
+        Recupera um cliente específico pelo seu ID.
 
         Args:
             cliente_id (int): O ID do cliente a ser buscado.
@@ -43,7 +62,8 @@ class ClienteService:
         Cria um novo cliente no banco de dados.
 
         Args:
-            **data: Um dicionário contendo os dados do cliente (nome, cpf, etc.).
+            **data: Atributos do cliente a serem criados (ex: nome, cpf, email).
+                    Os nomes das chaves devem corresponder aos atributos do modelo Cliente.
 
         Returns:
             Cliente: O objeto Cliente recém-criado e persistido.
@@ -60,7 +80,7 @@ class ClienteService:
 
         Args:
             cliente_id (int): O ID do cliente a ser atualizado.
-            **data: Um dicionário com os campos a serem atualizados.
+            **data: Dicionário contendo os campos e os novos valores a serem atualizados.
 
         Returns:
             Optional[Cliente]: O objeto Cliente atualizado, ou None se não for encontrado.
@@ -75,7 +95,7 @@ class ClienteService:
 
     def delete_cliente(self, cliente_id: int):
         """
-        Exclui um cliente do banco de dados.
+        Exclui um cliente do banco de dados, se ele existir.
 
         Args:
             cliente_id (int): O ID do cliente a ser excluído.
@@ -85,23 +105,27 @@ class ClienteService:
             self.db.delete(cliente)
             self.db.commit()
 
-    def search_clientes(self, search_term: str, limit: Optional[int] = None) -> List[Cliente]:
+    def search_clientes(self, search_term: str, limit: Optional[int] = None, offset: Optional[int] = None) -> List[Cliente]:
         """
-        Busca clientes por nome ou CPF, com um limite opcional.
+        Busca clientes por nome ou CPF com suporte para paginação.
 
         Args:
-            search_term (str): O termo para buscar.
-            limit (Optional[int]): O número máximo de resultados a retornar.
+            search_term (str): O termo para buscar (case-insensitive).
+            limit (Optional[int]): O número máximo de clientes a retornar.
+            offset (Optional[int]): O número de clientes a pular (para paginação).
 
         Returns:
-            List[Cliente]: Uma lista de clientes que correspondem à busca.
+            List[Cliente]: Uma lista paginada de clientes que correspondem aos critérios.
         """
-        query = self.db.query(Cliente).order_by(Cliente.nome)
+        # Ordena por nome e depois por ID para garantir uma ordem estável para paginação
+        query = self.db.query(Cliente).order_by(Cliente.nome, Cliente.id)
         if search_term:
             search_pattern = f"%{search_term}%"
             query = query.filter(or_(Cliente.nome.ilike(search_pattern), Cliente.cpf.ilike(search_pattern)))
 
-        if limit:
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
             query = query.limit(limit)
         
         return query.all()

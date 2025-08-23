@@ -8,9 +8,10 @@ de CRUD (Criar, Ler, Atualizar, Deletar).
 """
 from typing import List, Optional
 
+from PyQt6.QtCore import Qt, QTimer
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from PyQt6.QtWidgets import (QHeaderView, QHBoxLayout, QLabel, QMessageBox,
+from PyQt6.QtWidgets import (QApplication, QHeaderView, QHBoxLayout, QLabel, QMessageBox,
                              QPushButton, QTableWidget, QTableWidgetItem,
                              QLineEdit, QVBoxLayout, QWidget)
 
@@ -41,9 +42,20 @@ class ClientesTabWidget(QWidget):
         super().__init__(parent)
         self.cliente_service = cliente_service
         self.db_session = db_session
+        self.page_size = 20
+        self.current_offset = 0
+        self._is_loading = False
+        self._has_more_data_to_load = True
+        self._setup_search_timer()
         self._setup_ui()
-        self.load_clientes()
+        self._trigger_data_load()  # Carga inicial de dados
 
+    def _setup_search_timer(self):
+        """Configura o timer para debouncing da busca."""
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(500)  # Atraso de 500ms
+        self.search_timer.timeout.connect(self._trigger_data_load)
     def _setup_ui(self):
         """Configura a interface da aba de clientes."""
         layout = QVBoxLayout(self)
@@ -53,7 +65,7 @@ class ClientesTabWidget(QWidget):
         self.search_label = QLabel("Buscar por Nome ou CPF:")
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Digite para buscar...")
-        self.search_input.textChanged.connect(self.search_clientes)
+        self.search_input.textChanged.connect(self.search_timer.start)
         
         self.add_button = QPushButton("Novo Cliente")
         self.add_button.clicked.connect(self.add_cliente)
@@ -80,27 +92,83 @@ class ClientesTabWidget(QWidget):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(self._ClienteTableCols.NOME, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.verticalScrollBar().valueChanged.connect(self._check_scroll_position)
+
+        # Indicador de carregamento
+        self.loading_label = QLabel("Carregando mais clientes...")
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_label.hide() # Oculto por padrão
+
         layout.addWidget(self.table)
+        layout.addWidget(self.loading_label)
 
-    def load_clientes(self, clientes: Optional[List[Cliente]] = None):
-        """Carrega os dados dos clientes na tabela."""
+    def _append_clientes_to_table(self, clientes: List[Cliente]):
+        """Adiciona uma lista de clientes ao final da tabela."""
+        start_row = self.table.rowCount()
+        self.table.setRowCount(start_row + len(clientes))
+        for row_offset, cliente in enumerate(clientes):
+            row = start_row + row_offset
+            self.table.setItem(row, self._ClienteTableCols.ID, QTableWidgetItem(str(cliente.id)))
+            self.table.setItem(row, self._ClienteTableCols.NOME, QTableWidgetItem(cliente.nome))
+            self.table.setItem(row, self._ClienteTableCols.CPF, QTableWidgetItem(cliente.cpf))
+            self.table.setItem(row, self._ClienteTableCols.TELEFONE, QTableWidgetItem(cliente.telefone))
+            self.table.setItem(row, self._ClienteTableCols.EMAIL, QTableWidgetItem(cliente.email))
+            self.table.setItem(row, self._ClienteTableCols.ENDERECO, QTableWidgetItem(cliente.endereco))
+
+    def _trigger_data_load(self):
+        """
+        Reseta o estado da tabela e inicia o carregamento dos dados de forma paginada.
+        Este método é o ponto de entrada para qualquer atualização da tabela (carga inicial,
+        busca, ou refresh após uma operação de CRUD).
+        """
+        self.current_offset = 0
+        self._is_loading = False
+        self._has_more_data_to_load = True
+        self.table.setRowCount(0)
+        self._load_more_clientes()
+
+    def _load_more_clientes(self):
+        """Busca mais clientes (seja da lista geral ou de uma busca) e os adiciona na tabela."""
+        if self._is_loading or not self._has_more_data_to_load:
+            return
+
+        self._is_loading = True
+        self.loading_label.show()
+        QApplication.processEvents()  # Força a UI a atualizar antes da chamada bloqueante
+
+        search_term = self.search_input.text().strip()
         try:
-            clientes_a_carregar = clientes if clientes is not None else self.cliente_service.get_all_clientes()
-            self.table.setRowCount(len(clientes_a_carregar))
-            for row, cliente in enumerate(clientes_a_carregar):
-                self.table.setItem(row, self._ClienteTableCols.ID, QTableWidgetItem(str(cliente.id)))
-                self.table.setItem(row, self._ClienteTableCols.NOME, QTableWidgetItem(cliente.nome))
-                self.table.setItem(row, self._ClienteTableCols.CPF, QTableWidgetItem(cliente.cpf))
-                self.table.setItem(row, self._ClienteTableCols.TELEFONE, QTableWidgetItem(cliente.telefone))
-                self.table.setItem(row, self._ClienteTableCols.EMAIL, QTableWidgetItem(cliente.email))
-                self.table.setItem(row, self._ClienteTableCols.ENDERECO, QTableWidgetItem(cliente.endereco))
+            if search_term:
+                # Modo de busca paginada
+                novos_clientes = self.cliente_service.search_clientes(
+                    search_term=search_term,
+                    limit=self.page_size,
+                    offset=self.current_offset
+                )
+            else:
+                # Modo de navegação normal
+                novos_clientes = self.cliente_service.get_all_clientes(
+                    limit=self.page_size,
+                    offset=self.current_offset
+                )
+            if novos_clientes:
+                self._append_clientes_to_table(novos_clientes)
+                self.current_offset += len(novos_clientes)
+                if len(novos_clientes) < self.page_size:
+                    self._has_more_data_to_load = False
+            else:
+                self._has_more_data_to_load = False
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Não foi possível carregar os clientes: {e}")
+            QMessageBox.critical(self, "Erro", f"Não foi possível carregar mais clientes: {e}")
+        finally:
+            self._is_loading = False
+            self.loading_label.hide()
 
-    def search_clientes(self):
-        """Filtra a lista de clientes com base no termo de busca."""
-        search_term = self.search_input.text()
-        self.load_clientes(self.cliente_service.search_clientes(search_term))
+    def _check_scroll_position(self, value: int):
+        """Verifica se o scroll chegou ao fim para carregar mais itens."""
+        scrollbar = self.table.verticalScrollBar()
+        if value == scrollbar.maximum():
+            self._load_more_clientes()
 
     def add_cliente(self):
         """Abre o diálogo para adicionar um novo cliente."""
@@ -108,7 +176,7 @@ class ClientesTabWidget(QWidget):
         if dialog.exec():
             try:
                 self.cliente_service.create_cliente(**dialog.get_data())
-                self.load_clientes()
+                self._trigger_data_load()
             except Exception as e:
                 self.db_session.rollback()
                 QMessageBox.critical(self, "Erro", f"Não foi possível criar o cliente: {e}")
@@ -126,7 +194,7 @@ class ClientesTabWidget(QWidget):
             if dialog.exec():
                 try:
                     self.cliente_service.update_cliente(cliente_id, **dialog.get_data())
-                    self.load_clientes()
+                    self._trigger_data_load()
                 except Exception as e:
                     self.db_session.rollback()
                     QMessageBox.critical(self, "Erro", f"Não foi possível atualizar o cliente: {e}")
@@ -144,7 +212,7 @@ class ClientesTabWidget(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             try:
                 self.cliente_service.delete_cliente(cliente_id)
-                self.load_clientes()
+                self._trigger_data_load()
             except IntegrityError:
                 # É crucial reverter a sessão para um estado limpo após um erro.
                 self.db_session.rollback()
@@ -155,5 +223,10 @@ class ClientesTabWidget(QWidget):
 
     def refresh_data(self):
         """Método público para recarregar os dados da aba, limpando a busca."""
+        self.search_timer.stop()
+        # Bloqueia os sinais para evitar que clear() dispare o timer
+        self.search_input.blockSignals(True)
         self.search_input.clear()
-        self.load_clientes()
+        self.search_input.blockSignals(False)
+        # Dispara o carregamento imediatamente, agora com o campo de busca limpo
+        self._trigger_data_load()
