@@ -1,6 +1,6 @@
 # models/cliente.py
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 from .base_model import Base, TimestampMixin
 
@@ -16,6 +16,7 @@ class Cliente(Base, TimestampMixin):
     telefone = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
     endereco = Column(String(255), nullable=True)
+    outras_informacoes = Column(Text, nullable=True)
 
     emprestimos = relationship("Emprestimo", back_populates="cliente")
 

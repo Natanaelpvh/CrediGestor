@@ -7,7 +7,7 @@ de inicialização de forma orientada a objetos, garantindo que o ambiente
 esteja pronto antes de executar a aplicação principal.
 """
 import sys
-import os
+from pathlib import Path
 import logging
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
@@ -21,7 +21,8 @@ class ApplicationLauncher:
         """Inicializa o launcher e configura o logging."""
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         logging.info("Iniciando verificação de ambiente...")
-        self.icon_path = 'assets/icon.ico' if sys.platform == 'win32' else 'assets/icon.png'
+        icon_filename = 'icon.ico' if sys.platform == 'win32' else 'icon.png'
+        self.icon_path = Path('assets') / icon_filename
 
     def _check_dependencies(self) -> bool:
         """
@@ -51,7 +52,7 @@ class ApplicationLauncher:
             bool: True se o arquivo .env já existia ou foi criado com sucesso.
                   False se o usuário cancelou o assistente de configuração.
         """
-        if not os.path.exists('.env'):
+        if not Path('.env').exists():
             logging.warning("Arquivo de configuração .env não encontrado. Iniciando assistente de configuração.")
             from PyQt6.QtWidgets import QDialog
             from ui.db_config_window import DBConfigWindow
@@ -77,8 +78,8 @@ class ApplicationLauncher:
 
         # Garante que a instância da aplicação exista e define o ícone global.
         app = QApplication.instance() or QApplication(sys.argv)
-        if os.path.exists(self.icon_path):
-            app.setWindowIcon(QIcon(self.icon_path))
+        if self.icon_path.exists():
+            app.setWindowIcon(QIcon(str(self.icon_path)))
 
         try:
             from main import main as launch_main_app

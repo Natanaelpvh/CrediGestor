@@ -8,6 +8,7 @@ Esta classe é responsável por:
 - Lidar com todas as interações do usuário, como cliques em botões e buscas.
 - Orquestrar a abertura de diálogos para criação, edição e visualização de dados.
 """
+import logging
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMessageBox, QTabWidget, QFileDialog
 )
@@ -28,6 +29,12 @@ class MainWindow(QMainWindow):
     """
     Janela principal da aplicação.
     """
+    @property
+    def is_admin(self) -> bool:
+        """Verifica se o usuário logado é um administrador."""
+        # Acesso seguro para evitar AttributeError se o objeto não for o esperado
+        return getattr(self.usuario_logado, 'role', None) and self.usuario_logado.role.value == 'admin'
+
     # --- Constantes para Colunas das Tabelas ---
     # Usar constantes em vez de números mágicos torna o código mais legível e fácil de manter.
     def __init__(self, usuario_logado: Usuario, db_session: Session):
@@ -59,7 +66,7 @@ class MainWindow(QMainWindow):
 
         self.setup_ui()
 
-        if hasattr(self.usuario_logado, 'role') and getattr(self.usuario_logado.role, 'value', None) == 'admin':
+        if self.is_admin:
             self.menu_admin = self.menuBar().addMenu("Administração")
             self.menu_admin.addAction("Taxas de Juros", self.abrir_taxa_juros)
             restore_action = self.menu_admin.addAction("Restaurar Backup...")
@@ -83,16 +90,21 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.dashboard_tab, "Dashboard")
 
         # Aba de Usuários (somente para admins)
-        if self.usuario_logado.role.value == 'admin':
+        if self.is_admin:
             self.usuarios_tab = UsuariosTabWidget(self.usuario_service, self.usuario_logado, self.db_session, parent=self)
             self.tabs.addTab(self.usuarios_tab, "Usuários")
 
         # Aba de Clientes
-        self.clientes_tab = ClientesTabWidget(self.cliente_service, self.db_session, parent=self)
+        self.clientes_tab = ClientesTabWidget(
+            cliente_service=self.cliente_service,
+            db_session=self.db_session,
+            user_role=self.usuario_logado.role.value,
+            parent=self
+        )
         self.tabs.addTab(self.clientes_tab, "Clientes")
 
         # Aba de Empréstimos (somente para admins)
-        if self.usuario_logado.role.value == 'admin':
+        if self.is_admin:
             self.emprestimos_tab = EmprestimosTabWidget(
                 usuario_logado=self.usuario_logado,
                 emprestimo_service=self.emprestimo_service,
@@ -177,20 +189,39 @@ class MainWindow(QMainWindow):
         Args:
             index (int): O índice da nova aba selecionada.
         """
-        tab_text = self.tabs.tabText(index)
-        if tab_text == "Dashboard":
+        current_widget = self.tabs.widget(index)
+        if current_widget is self.dashboard_tab:
             self.dashboard_tab.refresh()
-        elif tab_text == "Clientes":
+        elif current_widget is self.clientes_tab:
             self.clientes_tab.refresh_data()
-        elif tab_text == "Usuários" and self.usuario_logado.role.value == 'admin':
-            self.usuarios_tab.refresh_data()
-        elif tab_text == "Empréstimos" and self.usuario_logado.role.value == 'admin':
-            self.emprestimos_tab.refresh_data()
+        elif self.is_admin:
+            if current_widget is self.usuarios_tab:
+                self.usuarios_tab.refresh_data()
+            elif current_widget is self.emprestimos_tab:
+                self.emprestimos_tab.refresh_data()
+
+    def _shutdown_threads(self):
+        """Itera sobre as abas conhecidas e chama o método stop_threads se existir."""
+        logging.info("Iniciando o encerramento dos threads das abas...")
+        
+        tabs_with_threads = [
+            getattr(self, 'clientes_tab', None),
+            getattr(self, 'usuarios_tab', None),
+            getattr(self, 'emprestimos_tab', None)
+        ]
+
+        for tab_widget in tabs_with_threads:
+            if tab_widget and hasattr(tab_widget, 'stop_threads'):
+                logging.info(f"Encerrando thread para {tab_widget.__class__.__name__}...")
+                tab_widget.stop_threads()
 
     def closeEvent(self, event) -> None:
         """
-        Sobrescreve o evento de fechamento da janela para perguntar ao usuário
-        se ele deseja realizar um backup antes de sair.
+        Sobrescreve o evento de fechamento da janela.
+        
+        Primeiro, pergunta ao usuário se deseja fazer um backup. Em seguida,
+        garante que todos os threads em segundo plano sejam encerrados com segurança
+        antes de permitir que a aplicação feche, prevenindo o erro 'QThread destroyed'.
 
         Args:
             event (QCloseEvent): O evento de fechamento.
@@ -200,17 +231,18 @@ class MainWindow(QMainWindow):
             "Confirmar Saída",
             "Deseja fazer um backup do banco de dados antes de sair?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel  # Botão padrão
+            QMessageBox.StandardButton.Cancel
         )
 
         if reply == QMessageBox.StandardButton.Cancel:
-            event.ignore()  # Impede que a janela feche
-        elif reply == QMessageBox.StandardButton.No:
-            event.accept()  # Permite que a janela feche
-        elif reply == QMessageBox.StandardButton.Yes:
-            # Abre um diálogo para o usuário escolher a pasta de backup
+            event.ignore()
+            return
+
+        # Se o usuário não cancelou, encerra os threads antes de prosseguir.
+        self._shutdown_threads()
+
+        if reply == QMessageBox.StandardButton.Yes:
             backup_dir = QFileDialog.getExistingDirectory(self, "Selecione a Pasta para Salvar o Backup")
-            
             if backup_dir:
                 try:
                     backup_manager = BackupManager()
@@ -222,7 +254,8 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     QMessageBox.critical(self, "Erro no Backup", f"Ocorreu um erro inesperado: {e}")
                 finally:
-                    event.accept()  # Fecha a aplicação após a tentativa de backup
+                    event.accept()
             else:
-                # Se o usuário cancelar a seleção da pasta, ignora o fechamento
                 event.ignore()
+        else:  # reply == QMessageBox.StandardButton.No
+            event.accept()

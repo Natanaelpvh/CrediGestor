@@ -1,7 +1,7 @@
 # ui/cliente_dialog.py
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLineEdit, QPushButton, QFormLayout, QMessageBox,
+    QDialog, QVBoxLayout, QLineEdit, QTextEdit, QFormLayout, QMessageBox,
     QDialogButtonBox
 )
 from typing import Optional
@@ -31,6 +31,9 @@ class ClienteDialog(QDialog):
         self.telefone_input = QLineEdit(self)
         self.email_input = QLineEdit(self)
         self.endereco_input = QLineEdit(self)
+        self.outras_informacoes_input = QTextEdit(self)
+        self.outras_informacoes_input.setPlaceholderText("Detalhes adicionais, observações, etc.")
+        self.outras_informacoes_input.setMaximumHeight(150) # Limita a altura para manter a estética
         
         # Adiciona campos ao layout do formulário
         self.form_layout.addRow("Nome:", self.nome_input)
@@ -38,6 +41,7 @@ class ClienteDialog(QDialog):
         self.form_layout.addRow("Telefone:", self.telefone_input)
         self.form_layout.addRow("Email:", self.email_input)
         self.form_layout.addRow("Endereço:", self.endereco_input)
+        self.form_layout.addRow("Outras Informações:", self.outras_informacoes_input)
 
         self.layout.addLayout(self.form_layout)
 
@@ -55,6 +59,7 @@ class ClienteDialog(QDialog):
             self.telefone_input.setText(self.cliente.telefone)
             self.email_input.setText(self.cliente.email)
             self.endereco_input.setText(self.cliente.endereco)
+            self.outras_informacoes_input.setText(self.cliente.outras_informacoes or "")
 
     def get_data(self) -> dict:
         """Retorna os dados dos campos do formulário."""
@@ -63,7 +68,8 @@ class ClienteDialog(QDialog):
             "cpf": self.cpf_input.text().strip(),
             "telefone": self.telefone_input.text().strip(),
             "email": self.email_input.text().strip(),
-            "endereco": self.endereco_input.text().strip()
+            "endereco": self.endereco_input.text().strip(),
+            "outras_informacoes": self.outras_informacoes_input.toPlainText().strip()
         }
 
     def accept(self):
